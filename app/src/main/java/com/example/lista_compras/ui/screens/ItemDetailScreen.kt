@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -22,7 +21,6 @@ import com.example.lista_compras.data.VariationOption
 import com.example.lista_compras.data.formatCurrency
 import com.example.lista_compras.ui.ShoppingViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemDetailScreen(
     categoryId: String,
@@ -54,17 +52,9 @@ fun ItemDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Detalhes: ${item.name}") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            CompactTopAppBar(
+                title = "Detalhes: ${item.name}",
+                onBack = onBack
             )
         }
     ) { innerPadding ->
@@ -223,7 +213,7 @@ fun ItemDetailScreen(
                 title = "Adicionar Fornecedor e Preço",
                 initialSupplier = "",
                 initialPrice = "",
-                suppliers = viewModel.suppliers,
+                suppliers = category.suppliers,
                 onDismiss = { showAddOptionDialog = false },
                 onSave = { supplier, price ->
                     viewModel.addComparisonOption(category.id, item.id, supplier, price)
@@ -237,7 +227,7 @@ fun ItemDetailScreen(
                 title = "Editar Fornecedor e Preço",
                 initialSupplier = option.supplier,
                 initialPrice = option.price.toString(),
-                suppliers = viewModel.suppliers,
+                suppliers = category.suppliers,
                 onDismiss = { optionToEdit = null },
                 onSave = { supplier, price ->
                     viewModel.updateComparisonOption(category.id, item.id, option.id, supplier, price)

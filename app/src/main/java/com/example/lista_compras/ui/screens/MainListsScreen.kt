@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import com.example.lista_compras.data.ShoppingListCategory
 import com.example.lista_compras.ui.ShoppingViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainListsScreen(
     viewModel: ShoppingViewModel,
@@ -25,23 +24,11 @@ fun MainListsScreen(
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var listToEdit by remember { mutableStateOf<ShoppingListCategory?>(null) }
-    var showSuppliersDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<ShoppingListCategory?>(null) }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Lista de compras") },
-                actions = {
-                    TextButton(onClick = { showSuppliersDialog = true }) {
-                        Text("Fornecedores", color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
+            CompactTopAppBar(title = "Lista de compras")
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
@@ -110,13 +97,6 @@ fun MainListsScreen(
                     categoryToDelete = null
                 },
                 onDismiss = { categoryToDelete = null }
-            )
-        }
-
-        if (showSuppliersDialog) {
-            SuppliersManagementDialog(
-                viewModel = viewModel,
-                onDismiss = { showSuppliersDialog = false }
             )
         }
     }

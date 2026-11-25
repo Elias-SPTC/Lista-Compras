@@ -40,7 +40,8 @@ data class ShoppingItem(
 data class ShoppingListCategory(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
-    val items: List<ShoppingItem> = emptyList()
+    val items: List<ShoppingItem> = emptyList(),
+    val suppliers: List<Supplier> = emptyList()
 )
 
 fun formatCurrency(price: Double?): String {

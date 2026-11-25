@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -23,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.example.lista_compras.data.ComparisonOption
 import com.example.lista_compras.data.ShoppingItem
 import com.example.lista_compras.data.ShoppingListCategory
+import com.example.lista_compras.data.Supplier
 import com.example.lista_compras.data.VariationOption
 import com.example.lista_compras.data.formatCurrency
 import com.example.lista_compras.ui.ShoppingViewModel
@@ -30,7 +30,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryItemsScreen(
     categoryId: String,
@@ -43,6 +42,7 @@ fun CategoryItemsScreen(
     var itemToEdit by remember { mutableStateOf<ShoppingItem?>(null) }
     var itemToDelete by remember { mutableStateOf<ShoppingItem?>(null) }
     var showSummaryScreen by remember { mutableStateOf(false) }
+    var showSuppliersScreen by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -107,50 +107,60 @@ fun CategoryItemsScreen(
         return
     }
 
+    if (showSuppliersScreen) {
+        SuppliersManagementScreen(
+            categoryId = category.id,
+            viewModel = viewModel,
+            onBack = { showSuppliersScreen = false }
+        )
+        return
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(category.name) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
-                    }
-                },
+            CompactTopAppBar(
+                title = category.name,
+                onBack = onBack,
                 actions = {
-                    IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Mais opções", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Mais opções", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Melhores preços") },
+                                onClick = {
+                                    menuExpanded = false
+                                    showSummaryScreen = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Gerenciar fornecedores") },
+                                onClick = {
+                                    menuExpanded = false
+                                    showSuppliersScreen = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Salvar lista") },
+                                onClick = {
+                                    menuExpanded = false
+                                    exportLauncher.launch("${category.name.replace(" ", "_")}_backup.json")
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Recuperar lista") },
+                                onClick = {
+                                    menuExpanded = false
+                                    importLauncher.launch(arrayOf("application/json", "*/*"))
+                                }
+                            )
+                        }
                     }
-                    DropdownMenu(
-                        expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Melhores preços") },
-                            onClick = {
-                                menuExpanded = false
-                                showSummaryScreen = true
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Salvar lista") },
-                            onClick = {
-                                menuExpanded = false
-                                exportLauncher.launch("${category.name.replace(" ", "_")}_backup.json")
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Recuperar lista") },
-                            onClick = {
-                                menuExpanded = false
-                                importLauncher.launch(arrayOf("application/json", "*/*"))
-                            }
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                }
             )
         },
         floatingActionButton = {
@@ -229,6 +239,14 @@ fun exportCategoryToJson(category: ShoppingListCategory): String {
     val catObj = JSONObject().apply {
         put("id", category.id)
         put("name", category.name)
+
+        val supArray = JSONArray()
+        for (s in category.suppliers) {
+            val sObj = JSONObject().put("id", s.id).put("name", s.name)
+            supArray.put(sObj)
+        }
+        put("suppliers", supArray)
+
         val itemsArray = JSONArray()
         for (item in category.items) {
             val obj = JSONObject().apply {
@@ -257,6 +275,16 @@ fun importCategoryFromJson(jsonString: String): ShoppingListCategory? {
         val catObj = JSONObject(jsonString)
         val catId = catObj.optString("id", UUID.randomUUID().toString())
         val catName = catObj.getString("name")
+
+        val suppliers = mutableListOf<Supplier>()
+        if (catObj.has("suppliers")) {
+            val supArray = catObj.getJSONArray("suppliers")
+            for (s in 0 until supArray.length()) {
+                val sObj = supArray.getJSONObject(s)
+                suppliers.add(Supplier(id = sObj.optString("id", UUID.randomUUID().toString()), name = sObj.getString("name")))
+            }
+        }
+
         val itemsArray = catObj.getJSONArray("items")
         val items = mutableListOf<ShoppingItem>()
         for (i in 0 until itemsArray.length()) {
@@ -285,7 +313,7 @@ fun importCategoryFromJson(jsonString: String): ShoppingListCategory? {
             }
             items.add(ShoppingItem(id = id, name = name, variations = variations, comparisonOptions = comparisonOptions))
         }
-        return ShoppingListCategory(id = catId, name = catName, items = items)
+        return ShoppingListCategory(id = catId, name = catName, items = items, suppliers = suppliers)
     } catch (e: Exception) {
         e.printStackTrace()
         return null

@@ -3,8 +3,6 @@ package com.example.lista_compras.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -16,7 +14,6 @@ import com.example.lista_compras.data.ShoppingItem
 import com.example.lista_compras.data.ShoppingListCategory
 import com.example.lista_compras.data.formatCurrency
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BestPricesSummaryScreen(
     category: ShoppingListCategory,
@@ -30,17 +27,9 @@ fun BestPricesSummaryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Melhores preços: ${category.name}") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            CompactTopAppBar(
+                title = "Melhores preços: ${category.name}",
+                onBack = onBack
             )
         },
         bottomBar = {

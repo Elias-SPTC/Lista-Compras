@@ -15,96 +15,13 @@ import org.json.JSONObject
 class ShoppingViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("shopping_prefs", Context.MODE_PRIVATE)
     private val _categories = mutableStateListOf<ShoppingListCategory>()
-    private val _suppliers = mutableStateListOf<Supplier>()
 
     init {
-        loadData()
+        loadCategories()
     }
 
     val categories: List<ShoppingListCategory> get() = _categories
-    val suppliers: List<Supplier> get() = _suppliers
 
-    private fun loadData() {
-        loadCategories()
-        loadSuppliers()
-    }
-
-    private fun loadSuppliers() {
-        val jsonString = prefs.getString("saved_suppliers", null)
-        if (jsonString != null) {
-            try {
-                val jsonArray = JSONArray(jsonString)
-                val loadedSuppliers = mutableListOf<Supplier>()
-                for (i in 0 until jsonArray.length()) {
-                    val obj = jsonArray.getJSONObject(i)
-                    loadedSuppliers.add(
-                        Supplier(
-                            id = obj.getString("id"),
-                            name = obj.getString("name")
-                        )
-                    )
-                }
-                _suppliers.clear()
-                _suppliers.addAll(loadedSuppliers)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                loadDefaultSuppliers()
-            }
-        } else {
-            loadDefaultSuppliers()
-        }
-    }
-
-    private fun loadDefaultSuppliers() {
-        val defaultSuppliers = listOf(
-            Supplier(name = "Supermercado Extra"),
-            Supplier(name = "Atacadão"),
-            Supplier(name = "Carrefour"),
-            Supplier(name = "Droga Raia"),
-            Supplier(name = "Farmácia São João")
-        )
-        _suppliers.clear()
-        _suppliers.addAll(defaultSuppliers)
-        saveSuppliers()
-    }
-
-    private fun saveSuppliers() {
-        try {
-            val jsonArray = JSONArray()
-            for (s in _suppliers) {
-                val obj = JSONObject()
-                obj.put("id", s.id)
-                obj.put("name", s.name)
-                jsonArray.put(obj)
-            }
-            prefs.edit().putString("saved_suppliers", jsonArray.toString()).apply()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    fun addSupplier(name: String) {
-        if (name.isBlank()) return
-        if (_suppliers.any { it.name.equals(name.trim(), ignoreCase = true) }) return
-        _suppliers.add(Supplier(name = name.trim()))
-        saveSuppliers()
-    }
-
-    fun updateSupplier(id: String, name: String) {
-        if (name.isBlank()) return
-        val index = _suppliers.indexOfFirst { it.id == id }
-        if (index != -1) {
-            _suppliers[index] = _suppliers[index].copy(name = name.trim())
-            saveSuppliers()
-        }
-    }
-
-    fun deleteSupplier(id: String) {
-        _suppliers.removeAll { it.id == id }
-        saveSuppliers()
-    }
-
-    // Categories and Items persistence
     private fun loadCategories() {
         val jsonString = prefs.getString("saved_categories", null)
         if (jsonString != null) {
@@ -115,6 +32,15 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
                     val catObj = jsonArray.getJSONObject(i)
                     val catId = catObj.getString("id")
                     val catName = catObj.getString("name")
+
+                    val suppliers = mutableListOf<Supplier>()
+                    if (catObj.has("suppliers")) {
+                        val supArray = catObj.getJSONArray("suppliers")
+                        for (s in 0 until supArray.length()) {
+                            val sObj = supArray.getJSONObject(s)
+                            suppliers.add(Supplier(id = sObj.getString("id"), name = sObj.getString("name")))
+                        }
+                    }
 
                     val itemsArray = catObj.getJSONArray("items")
                     val items = mutableListOf<ShoppingItem>()
@@ -146,7 +72,7 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
                         items.add(ShoppingItem(id = id, name = name, variations = variations, comparisonOptions = comparisonOptions))
                     }
 
-                    loadedCategories.add(ShoppingListCategory(id = catId, name = catName, items = items))
+                    loadedCategories.add(ShoppingListCategory(id = catId, name = catName, items = items, suppliers = suppliers))
                 }
                 _categories.clear()
                 _categories.addAll(loadedCategories)
@@ -163,6 +89,11 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
         val defaultList = listOf(
             ShoppingListCategory(
                 name = "Cereais e Mantimentos",
+                suppliers = listOf(
+                    Supplier(name = "Supermercado Extra"),
+                    Supplier(name = "Atacadão"),
+                    Supplier(name = "Carrefour")
+                ),
                 items = listOf(
                     ShoppingItem(
                         name = "Café",
@@ -194,6 +125,10 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
             ),
             ShoppingListCategory(
                 name = "Lista de Remédios",
+                suppliers = listOf(
+                    Supplier(name = "Droga Raia"),
+                    Supplier(name = "Farmácia São João")
+                ),
                 items = listOf(
                     ShoppingItem(
                         name = "Anador",
@@ -207,6 +142,7 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
             ),
             ShoppingListCategory(
                 name = "Eletrônicos",
+                suppliers = emptyList(),
                 items = emptyList()
             )
         )
@@ -222,6 +158,15 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
                 val catObj = JSONObject()
                 catObj.put("id", cat.id)
                 catObj.put("name", cat.name)
+
+                val supArray = JSONArray()
+                for (s in cat.suppliers) {
+                    val sObj = JSONObject()
+                    sObj.put("id", s.id)
+                    sObj.put("name", s.name)
+                    supArray.put(sObj)
+                }
+                catObj.put("suppliers", supArray)
 
                 val itemsArray = JSONArray()
                 for (item in cat.items) {
@@ -256,6 +201,42 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
             prefs.edit().putString("saved_categories", jsonArray.toString()).apply()
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    // Per-list Supplier CRUD
+    fun addSupplier(categoryId: String, name: String) {
+        if (name.isBlank()) return
+        val catIndex = _categories.indexOfFirst { it.id == categoryId }
+        if (catIndex != -1) {
+            val cat = _categories[catIndex]
+            if (cat.suppliers.any { it.name.equals(name.trim(), ignoreCase = true) }) return
+            val newSuppliers = cat.suppliers + Supplier(name = name.trim())
+            _categories[catIndex] = cat.copy(suppliers = newSuppliers)
+            saveCategories()
+        }
+    }
+
+    fun updateSupplier(categoryId: String, supplierId: String, name: String) {
+        if (name.isBlank()) return
+        val catIndex = _categories.indexOfFirst { it.id == categoryId }
+        if (catIndex != -1) {
+            val cat = _categories[catIndex]
+            val newSuppliers = cat.suppliers.map { s ->
+                if (s.id == supplierId) s.copy(name = name.trim()) else s
+            }
+            _categories[catIndex] = cat.copy(suppliers = newSuppliers)
+            saveCategories()
+        }
+    }
+
+    fun deleteSupplier(categoryId: String, supplierId: String) {
+        val catIndex = _categories.indexOfFirst { it.id == categoryId }
+        if (catIndex != -1) {
+            val cat = _categories[catIndex]
+            val newSuppliers = cat.suppliers.filter { it.id != supplierId }
+            _categories[catIndex] = cat.copy(suppliers = newSuppliers)
+            saveCategories()
         }
     }
 
@@ -373,7 +354,7 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
 
     fun addComparisonOption(categoryId: String, itemId: String, supplier: String, price: Double) {
         if (supplier.isBlank()) return
-        addSupplier(supplier)
+        addSupplier(categoryId, supplier)
 
         val catIndex = _categories.indexOfFirst { it.id == categoryId }
         if (catIndex != -1) {
@@ -390,7 +371,7 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
 
     fun updateComparisonOption(categoryId: String, itemId: String, optionId: String, supplier: String, price: Double) {
         if (supplier.isBlank()) return
-        addSupplier(supplier)
+        addSupplier(categoryId, supplier)
 
         val catIndex = _categories.indexOfFirst { it.id == categoryId }
         if (catIndex != -1) {
