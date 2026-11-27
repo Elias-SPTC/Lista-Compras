@@ -60,11 +60,13 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
                         val comparisonOptions = mutableListOf<ComparisonOption>()
                         for (l in 0 until compArray.length()) {
                             val cObj = compArray.getJSONObject(l)
+                            val varName = if (cObj.has("variationName") && !cObj.isNull("variationName")) cObj.getString("variationName") else null
                             comparisonOptions.add(
                                 ComparisonOption(
                                     id = cObj.getString("id"),
                                     supplier = cObj.getString("supplier"),
-                                    price = cObj.getDouble("price")
+                                    price = cObj.getDouble("price"),
+                                    variationName = varName
                                 )
                             )
                         }
@@ -189,6 +191,7 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
                         cObj.put("id", c.id)
                         cObj.put("supplier", c.supplier)
                         cObj.put("price", c.price)
+                        cObj.put("variationName", c.variationName ?: JSONObject.NULL)
                         compArray.put(cObj)
                     }
                     obj.put("comparisonOptions", compArray)
@@ -352,7 +355,7 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun addComparisonOption(categoryId: String, itemId: String, supplier: String, price: Double) {
+    fun addComparisonOption(categoryId: String, itemId: String, supplier: String, price: Double, variationName: String?) {
         if (supplier.isBlank()) return
         addSupplier(categoryId, supplier)
 
@@ -361,7 +364,7 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
             val cat = _categories[catIndex]
             val newItems = cat.items.map { item ->
                 if (item.id == itemId) {
-                    item.copy(comparisonOptions = item.comparisonOptions + ComparisonOption(supplier = supplier.trim(), price = price))
+                    item.copy(comparisonOptions = item.comparisonOptions + ComparisonOption(supplier = supplier.trim(), price = price, variationName = variationName?.trim()))
                 } else item
             }
             _categories[catIndex] = cat.copy(items = newItems)
@@ -369,7 +372,7 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun updateComparisonOption(categoryId: String, itemId: String, optionId: String, supplier: String, price: Double) {
+    fun updateComparisonOption(categoryId: String, itemId: String, optionId: String, supplier: String, price: Double, variationName: String?) {
         if (supplier.isBlank()) return
         addSupplier(categoryId, supplier)
 
@@ -379,7 +382,7 @@ class ShoppingViewModel(application: Application) : AndroidViewModel(application
             val newItems = cat.items.map { item ->
                 if (item.id == itemId) {
                     val newOpts = item.comparisonOptions.map { opt ->
-                        if (opt.id == optionId) opt.copy(supplier = supplier.trim(), price = price) else opt
+                        if (opt.id == optionId) opt.copy(supplier = supplier.trim(), price = price, variationName = variationName?.trim()) else opt
                     }
                     item.copy(comparisonOptions = newOpts)
                 } else item

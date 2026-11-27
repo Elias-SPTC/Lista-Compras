@@ -213,10 +213,12 @@ fun ItemDetailScreen(
                 title = "Adicionar Fornecedor e Preço",
                 initialSupplier = "",
                 initialPrice = "",
+                initialVariationName = null,
                 suppliers = category.suppliers,
+                variations = item.variations,
                 onDismiss = { showAddOptionDialog = false },
-                onSave = { supplier, price ->
-                    viewModel.addComparisonOption(category.id, item.id, supplier, price)
+                onSave = { supplier, price, varName ->
+                    viewModel.addComparisonOption(category.id, item.id, supplier, price, varName)
                     showAddOptionDialog = false
                 }
             )
@@ -227,10 +229,12 @@ fun ItemDetailScreen(
                 title = "Editar Fornecedor e Preço",
                 initialSupplier = option.supplier,
                 initialPrice = option.price.toString(),
+                initialVariationName = option.variationName,
                 suppliers = category.suppliers,
+                variations = item.variations,
                 onDismiss = { optionToEdit = null },
-                onSave = { supplier, price ->
-                    viewModel.updateComparisonOption(category.id, item.id, option.id, supplier, price)
+                onSave = { supplier, price, varName ->
+                    viewModel.updateComparisonOption(category.id, item.id, option.id, supplier, price, varName)
                     optionToEdit = null
                 }
             )
@@ -331,6 +335,12 @@ fun ComparisonOptionRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val titleText = if (option.variationName != null) {
+        "${option.supplier} (${option.variationName})"
+    } else {
+        option.supplier
+    }
+
     Card(
         colors = CardDefaults.cardColors(
             containerColor = if (isBest) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
@@ -348,7 +358,7 @@ fun ComparisonOptionRow(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = option.supplier,
+                        text = titleText,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -395,12 +405,15 @@ fun ComparisonOptionFormDialog(
     title: String,
     initialSupplier: String,
     initialPrice: String,
+    initialVariationName: String?,
     suppliers: List<Supplier>,
+    variations: List<VariationOption>,
     onDismiss: () -> Unit,
-    onSave: (String, Double) -> Unit
+    onSave: (String, Double, String?) -> Unit
 ) {
     var supplier by remember { mutableStateOf(initialSupplier) }
     var priceText by remember { mutableStateOf(initialPrice) }
+    var selectedVariation by remember { mutableStateOf(initialVariationName) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
@@ -432,6 +445,26 @@ fun ComparisonOptionFormDialog(
                     }
                 }
 
+                Text(text = "Aplicar preço a:", style = MaterialTheme.typography.labelSmall)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedVariation == null,
+                        onClick = { selectedVariation = null },
+                        label = { Text("Geral (Item principal)", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    variations.forEach { v ->
+                        FilterChip(
+                            selected = selectedVariation == v.name,
+                            onClick = { selectedVariation = v.name },
+                            label = { Text(v.name, style = MaterialTheme.typography.bodySmall) }
+                        )
+                    }
+                }
+
                 OutlinedTextField(
                     value = priceText,
                     onValueChange = { priceText = it.replace(',', '.') },
@@ -454,7 +487,7 @@ fun ComparisonOptionFormDialog(
                     } else if (price == null || price < 0) {
                         errorMessage = "Insira um preço válido."
                     } else {
-                        onSave(supplier, price)
+                        onSave(supplier, price, selectedVariation)
                     }
                 }
             ) {

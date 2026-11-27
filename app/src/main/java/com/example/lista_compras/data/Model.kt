@@ -18,7 +18,8 @@ data class VariationOption(
 data class ComparisonOption(
     val id: String = UUID.randomUUID().toString(),
     val supplier: String,
-    val price: Double
+    val price: Double,
+    val variationName: String? = null // Optional association with a specific variation
 )
 
 data class ShoppingItem(

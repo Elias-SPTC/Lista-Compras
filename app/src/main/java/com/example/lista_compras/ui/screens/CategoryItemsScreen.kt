@@ -71,7 +71,7 @@ fun CategoryItemsScreen(
     ) { uri ->
         uri?.let {
             try {
-                val json = context.contentResolver.openInputStream(uri)?.bufferedReader().use { it?.readText() }
+                val json = context.contentResolver.openInputStream(uri)?.bufferedReader().use { reader -> reader?.readText() }
                 if (json != null) {
                     val importedCat = importCategoryFromJson(json)
                     if (importedCat != null) {
@@ -123,8 +123,8 @@ fun CategoryItemsScreen(
                 onBack = onBack,
                 actions = {
                     Box {
-                        IconButton(onClick = { menuExpanded = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Mais opções", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Mais opções", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
                         }
                         DropdownMenu(
                             expanded = menuExpanded,
@@ -170,7 +170,7 @@ fun CategoryItemsScreen(
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            val items = category.items
+            val items = category.items.sortedBy { it.name.lowercase() }
             if (items.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
@@ -182,8 +182,8 @@ fun CategoryItemsScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     items(items, key = { it.id }) { item ->
                         ShoppingItemCard(
@@ -333,11 +333,11 @@ fun ShoppingItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
-                .padding(12.dp)
+                .padding(horizontal = 8.dp, vertical = 4.dp)
                 .fillMaxWidth()
         ) {
             Row(
@@ -352,36 +352,35 @@ fun ShoppingItemCard(
                     modifier = Modifier.weight(1f)
                 )
                 Row {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                     }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Apagar", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(2.dp))
+                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Delete, contentDescription = "Apagar", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                     }
                 }
             }
 
             if (variationsText.isNotBlank()) {
-                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "Variações: $variationsText",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(6.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Melhor Preço:",
-                        style = MaterialTheme.typography.labelSmall,
+                        text = "Melhor Preço: ",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.secondary
                     )
                     Text(
@@ -391,10 +390,10 @@ fun ShoppingItemCard(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-                Column(horizontalAlignment = Alignment.End) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Melhor Fornecedor:",
-                        style = MaterialTheme.typography.labelSmall,
+                        text = "Fornecedor: ",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.secondary
                     )
                     Text(
